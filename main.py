@@ -76,7 +76,7 @@ def get_books(user, ids=[], is_verbose=False, is_quiet=False):
     return data
 
 
-def get_url_book(user, book_id, format='pdf'):
+def get_url_book(user, book_id, format='pdf', is_verbose=False):
     '''
         Return url of the book to download
     '''
@@ -92,7 +92,9 @@ def get_url_book(user, book_id, format='pdf'):
         return get_url_book(user, book_id, format)  # call recursive
 
     elif r.status_code == 403: # do not own; try subscription
-        return get_url_sections(user, book_id)  # call recursive
+        if is_verbose:
+            tqdm.write(f'{book_id} is not owned, trying subscription')
+        return get_url_sections(user, book_id, is_verbose=is_verbose)  # call recursive
 
     print('ERROR (please copy and paste in the issue)')
     print(r.json())
@@ -100,21 +102,24 @@ def get_url_book(user, book_id, format='pdf'):
     return []
 
 
-def get_url_sections(user, book_id):
+def get_url_sections(user, book_id, is_verbose=False):
     '''
         Return url of the sections to download
     '''
 
+    tqdm.write('Fetching chapters & sections...')
     url = URL_BOOK_TOC_ENDPOINT.format(book_id=book_id)
     r = requests.get(url)
 
     section_urls = []
     chapters = r.json().get('chapters', '')
-    for c in chapters:
-        for s in c['sections']:
+    for c in tqdm(chapters, unit='Chapter'):
+        for s in tqdm(c['sections'], unit='Section'):
             surl = BASE_URL + URL_BOOK_SECTION_ENDPOINT.format(book_id=book_id, chapter_id=c['id'], section_id=s['id'])
             r = requests.get(surl, headers=user.get_header())
             section_urls.append(r.json().get('data', ''))
+    if is_verbose:
+        tqdm.write(f'{book_id} has {len(section_urls)} sections in {len(chapters)} chapters')
     return section_urls
 
 
@@ -144,7 +149,7 @@ def download_book(filename, url):
     '''
         Download your book
     '''
-    print('Starting to download ' + filename)
+    tqdm.write('Starting to download ' + filename)
 
     with open(filename, 'wb') as f:
         r = requests.get(url, stream=True)
@@ -158,7 +163,7 @@ def download_book(filename, url):
                 if chunk:  # filter out keep-alive new chunks
                     f.write(chunk)
                     f.flush()
-            print('Finished ' + filename)
+            tqdm.write('Finished ' + filename)
 
 
 def make_zip(filename):
@@ -277,11 +282,13 @@ def main(argv):
                 else:
                     filename = f'{root_directory}/{book_name}.{file_type}'
                 # get url of the book to download
-                url = get_url_book(user, book['productId'], file_type)
+                url = get_url_book(user, book['productId'], format=file_type, is_verbose=verbose)
                 if isinstance(url, list):
-                    if verbose:
-                        tqdm.write(f'{filename} is not owned, downloading subscription')
-                    for u in url:
+                    if not quiet:
+                        url_iter = tqdm(url, unit='Section')
+                    else:
+                        url_iter = url
+                    for u in url_iter:
                         d = '/'.join(filename.split('/')[:-1])
                         f = u.split('/')[-1].split('?')[0]
                         filename = f'{d}/{f}'
@@ -304,3 +311,4 @@ def main(argv):
 
 if __name__ == '__main__':
     main(sys.argv[1:])
+    print('All complete...!')
