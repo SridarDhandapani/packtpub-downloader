@@ -10,7 +10,7 @@ import getopt
 import requests
 import re
 from tqdm import tqdm, trange
-from config import BASE_URL, PRODUCTS_ENDPOINT, URL_BOOK_DETAIL_ENDPOINT, URL_BOOK_TYPES_ENDPOINT, URL_BOOK_ENDPOINT
+from config import *
 from user import User
 
 
@@ -105,8 +105,8 @@ def get_url_sections(user, book_id):
         Return url of the sections to download
     '''
 
-    url = BASE_URL + URL_BOOK_TOC_ENDPOINT.format(book_id=book_id)
-    r = requests.get(url, headers=user.get_header())
+    url = URL_BOOK_TOC_ENDPOINT.format(book_id=book_id)
+    r = requests.get(url)
 
     section_urls = []
     chapters = r.json().get('chapters', '')
@@ -114,7 +114,7 @@ def get_url_sections(user, book_id):
         for s in c['sections']:
             surl = BASE_URL + URL_BOOK_SECTION_ENDPOINT.format(book_id=book_id, chapter_id=c['id'], section_id=s['id'])
             r = requests.get(surl, headers=user.get_header())
-            section_urls += r.json().get('data', '')
+            section_urls.append(r.json().get('data', ''))
     return section_urls
 
 
@@ -201,7 +201,7 @@ def main(argv):
     separate = None
     verbose = None
     quiet = None
-    errorMessage = 'Usage: main.py -e <email> -p <password> [-d <directory> -t <book file types> -b <book ids> -s -v -q]'
+    errorMessage = 'Usage: main.py [-e <email> -p <password> -d <directory> -t <book file types> -b <book ids> -s -v -q]'
 
     # get the command line arguments/options
     try:
@@ -286,7 +286,7 @@ def main(argv):
                         f = u.split('/')[-1].split('?')[0]
                         filename = f'{d}/{f}'
                         if not filename in downloaded_files:
-                            download_book(filename, url)
+                            download_book(filename, u)
                         else:
                             if verbose:
                                 tqdm.write(f'{filename} already exists, skipping.')
