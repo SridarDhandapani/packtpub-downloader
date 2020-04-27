@@ -155,7 +155,7 @@ def download_book(filename, url):
         r = requests.get(url, stream=True)
         total = r.headers.get('content-length')
         if total is None:
-            f.write(response.content)
+            f.write(r.content)
         else:
             total = int(total)
             # TODO: read more about tqdm
@@ -251,7 +251,7 @@ def main(argv):
 
     # create user with his properly header
     if email and password:
-        user = User(**{'username': email, 'password': password})
+        user = User(**{'username': email, 'password': password, 'file': True})
     else:
         user =  User()
 
