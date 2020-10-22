@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-#!/usr/bin/python
+#!/usr/bin/env python
 
 from __future__ import print_function
 import os
@@ -312,3 +311,4 @@ def main(argv):
 if __name__ == '__main__':
     main(sys.argv[1:])
     print('All complete...!')
+# -*- coding: utf-8 -*-
